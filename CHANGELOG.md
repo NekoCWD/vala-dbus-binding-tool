@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 - Modernized some Vala constructs (@tintou)
 - Bring back the high-level ChangeLog format (@mickeyl)
+- Added meson build system (@tintou)
 
 ### Removed
 - glib-dbus support (@tintou)
