@@ -29,9 +29,9 @@ OPTIONS
 `--version`
   Print the current version of this command.
 
-`-v`
-  Increase output verbosity.
-  
+`--verbose`, `-v`
+  Set output verbosity. 0 - warn, 1 - info, 2- debug.
+
 `--api-path`, `-p`
   Where the DBus XML specification files can be found.
 
@@ -40,13 +40,13 @@ OPTIONS
 
 `--strip-namespace`
   Whether you want to strip a namespace prefix. Can be given multiple times.
-  
+
 `--rename-namespace`
   When you want to rename a namespace. Can be given multiple times.
 
 `--dbus-timeout`
   The DBus timeout (in seconds) for asynchronous calls.
-  
+
 `--no-synced`
   Only create asynchronous interfaces.
 

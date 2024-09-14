@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Modernized some Vala constructs (@tintou)
 - Bring back the high-level ChangeLog format (@mickeyl)
 - Added meson build system (@tintou)
+- Argument parsing rewriten to use OptionEntry (@NekoCWD)
+  - Verbose argument format. Now to set verbose level you need to use `-v level`, istead of `-v -v -v...`
 
 ### Removed
 - glib-dbus support (@tintou)

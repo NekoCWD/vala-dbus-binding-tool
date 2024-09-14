@@ -32,9 +32,31 @@ internal class GeneratedNamespace {
 public class BindingGenerator : Object {
 
 	private static Set<string> registered_names = new HashSet<string>();
-	private static int verbosity;
 	private static int errors;
-	private static bool synced;
+
+	/* CLI args */
+	private static int verbosity;
+	private static bool synced = false;
+	private static bool version = false;
+	private static string api_path = null;
+	private static string output_directory_arg = null;
+	[CCode (array_length = false, array_null_terminated = true)]
+	private static string[] namespaces_to_rename = null;
+	[CCode (array_length = false, array_null_terminated = true)]
+	private static string[] namespaces_to_strip = null;
+	private static uint dbus_timeout_arg = 120000;
+
+	private const GLib.OptionEntry[] options = {
+		{ "version", '\0', OptionFlags.NONE, OptionArg.NONE, ref version, "Print the current version of this command.", null },
+		{ "verbose", 'v', OptionFlags.NONE, OptionArg.INT, ref verbosity, "Set out verbosity level. 0 - warn, 1 - info, 2 - debug.", "0"},
+		{ "api-path", 'p', OptionFlags.NONE, OptionArg.FILENAME, ref api_path, "Where the DBus XML specification files can be found.", "./" },
+		{ "directory", 'd', OptionFlags.NONE, OptionArg.FILENAME, ref output_directory_arg, "Where the output files should be placed.", "." },
+		{ "dbus-timeout", '\0', OptionFlags.NONE, OptionArg.INT, ref dbus_timeout_arg, "The DBus timeout (in seconds) for asynchronous calls.", "120000"},
+		{ "no-synced", 's', OptionFlags.NONE, OptionArg.NONE, ref synced, "Only create asynchronous interfaces.", null},
+		{ "strip-namespace", '\0', OptionFlags.NONE, OptionArg.STRING_ARRAY, ref namespaces_to_strip, "Whether you want to strip a namespace prefix. Can be given multiple times.", "example"},
+		{ "rename-namespace", '\0', OptionFlags.NONE, OptionArg.STRING_ARRAY, ref namespaces_to_rename, "When you want to rename a namespace. Can be given multiple times.", "example1:example2"},
+		{ null }
+	};
 
 	static construct {
 		registered_names.add("using");
@@ -82,67 +104,43 @@ public class BindingGenerator : Object {
 	}
 
 	public static int main(string[] args) {
-		//FIXME: Convert to OptionEntry
-		string[] split_name = args[0].split("/");
-		string program_name = split_name[split_name.length - 1];
 		string command = string.joinv(" ", args);
 
-		string api_path = null;
-		string output_directory = null;
-		uint dbus_timeout = 120000;
-		synced = true;
+		try {
+			var opt_context = new OptionContext ("");
+			opt_context.set_help_enabled (true);
+			opt_context.add_main_entries (options, null);
+			opt_context.parse (ref args);
+		} catch (OptionError e) {
+			printerr ("error: %s\n", e.message);
+			printerr ("Run '%s --help' to see a full list of available command line options.\n", args[0]);
+			return 1;
+		}
 
 		Map<string,string> namespace_renaming = new HashMap<string,string>();
 
-		for (int i = 1; i < args.length; i++) {
-			string arg = args[i];
-
-			string[] split_arg = arg.split("=");
-			switch (split_arg[0]) {
-			case "-h":
-			case "--help":
-				show_usage(program_name);
-				return 0;
-			case "-v":
-				verbosity++;
-				break;
-			case "--version":
-				show_version();
-				return 0;
-			case "--api-path":
-				api_path = split_arg[1];
-				break;
-			case "-d":
-			case "--directory":
-				output_directory = split_arg[1];
-				break;
-			case "--strip-namespace":
-				namespace_renaming.set(split_arg[1], "");
-				break;
-			case "--rename-namespace":
-				string[] ns_split = split_arg[1].split(":");
-				namespace_renaming.set(ns_split[0], ns_split[1]);
-				break;
-			case "--dbus-timeout":
-				dbus_timeout = int.parse( split_arg[1] );
-				break;
-			case "--no-synced":
-				synced = false;
-				break;
-			default:
-				stdout.printf("%s: Unknown option %s\n", program_name, arg);
-				show_usage(program_name);
-				return 1;
-			}
-		}
-
+		synced = !synced;
 		if (api_path == null)
 			api_path = "./";
-		if (output_directory == null)
-			output_directory = ".";
+		if (output_directory_arg == null)
+			output_directory_arg = ".";
+
+		foreach (var namespace_to_strip in namespaces_to_strip){
+		    namespace_renaming.set(namespace_to_strip, "");
+		}
+
+		foreach (var namespace_to_rename in namespaces_to_rename){
+		    string[] ns_split = namespace_to_rename.split(":", 2);
+		    namespace_renaming.set(ns_split[0], ns_split[1]);
+		}
+
+		if (version) {
+		    show_version();
+			return 0;
+		}
 
 		try {
-			generate(api_path, output_directory, namespace_renaming, command, dbus_timeout);
+			generate(api_path, output_directory_arg, namespace_renaming, command, dbus_timeout_arg);
 		} catch (GLib.FileError ex) {
 			ERROR(ex.message);
 			return 1;
@@ -163,12 +161,6 @@ public class BindingGenerator : Object {
 		stdout.printf("Written by Didier \"Ptitjes\" and the freesmartphone.org team\n");
 		stdout.printf("This is free software; see the source for copying conditions.\n");
 		stdout.printf("There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n");
-	}
-
-	private static void show_usage(string program_name) {
-		stdout.printf("Usage:\n");
-		stdout.printf("  %s [-v] [--version] [--help]\n", program_name);
-		stdout.printf("  %s [--api-path=PATH] [--no-synced] [--dbus-timeout=TIMEOUT] [--directory=DIR] [--strip-namespace=NS]* [--rename-namespace=OLD_NS:NEW_NS]*\n", program_name);
 	}
 
 	public static void generate(string api_path, string output_directory,
