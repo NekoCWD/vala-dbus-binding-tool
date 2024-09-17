@@ -962,6 +962,7 @@ public class BindingGenerator : Object {
 			case "u":
 			case "x":
 			case "d":
+			case "y":
 				return true;
 		}
 		return false;
